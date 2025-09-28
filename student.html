@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>تسجيل حضور – الطالب</title>
+  <style>
+    :root{--bg:#0b1020;--card:#141a2f;--text:#eef2ff;--muted:#9aa4c7;--accent:#5da8ff}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:tahoma,arial,sans-serif;background:var(--bg);color:#eef2ff}
+    .container{max-width:600px;margin:0 auto;padding:20px}
+    .card{background:var(--card);border-radius:16px;padding:18px;box-shadow:0 6px 24px #0006;margin:12px 0}
+    h1{margin:0 0 10px}
+    label{display:block;margin:10px 0 6px}
+    input{width:100%;padding:10px;border-radius:10px;border:1px solid #2a3358;background:#0f1530;color:#fff}
+    button{display:inline-block;padding:10px 16px;border-radius:12px;border:none;background:var(--accent);color:#00112b;font-weight:700;cursor:pointer}
+    .muted{color:#9aa4c7}
+    .pill{display:inline-block;background:#0f1530;border:1px solid #2a3358;padding:6px 10px;border-radius:999px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>تسجيل الحضور</h1>
+    <div class="card">
+      <p class="muted">الجلسة: <span id="sess" class="pill"></span></p>
+      <p class="muted">المحاضرة: <span id="ltitle" class="pill"></span> — <span id="ldate" class="pill"></span></p>
+
+      <label>الاسم الكامل</label>
+      <input id="name" placeholder="مثال: مصطفى محمد فوزي" />
+
+      <label>الشعبة / المجموعة</label>
+      <input id="section" placeholder="مثال: A / 3" />
+
+      <label>رابط Web App (مرة واحدة إذا لم يكن محفوظًا)</label>
+      <input id="endpoint" placeholder="https://script.google.com/macros/s/.../exec" />
+
+      <div style="margin-top:10px">
+        <button id="send">تسجيل</button>
+      </div>
+      <p id="ok" class="muted" style="display:none;margin-top:10px">✅ تم تسجيل حضورك. شكراً لك.</p>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const P = new URLSearchParams(location.search);
+      const S = (P.get('s')||'').trim();
+      const T = (P.get('t')||'').trim();
+      const D = (P.get('d')||'').trim();
+
+      document.getElementById('sess').textContent = S;
+      document.getElementById('ltitle').textContent = T;
+      document.getElementById('ldate').textContent = D;
+
+      const epInput = document.getElementById('endpoint');
+      epInput.value = localStorage.getItem('qr_ep') || '';
+
+      const nameInput = document.getElementById('name');
+      const secInput = document.getElementById('section');
+      const ok = document.getElementById('ok');
+
+      document.getElementById('send').onclick = async () => {
+        const EP = (epInput.value||'').trim();
+        if(!EP){ alert('أدخل رابط Web App'); return }
+        localStorage.setItem('qr_ep', EP);
+        if(!S){ alert('رمز الجلسة مفقود (امسح QR من الأستاذ)'); return }
+        const payload = {
+          mode: 'add',
+          session: S,
+          lecture_title: T,
+          lecture_date: D,
+          full_name: nameInput.value.trim(),
+          section: secInput.value.trim(),
+          ua: navigator.userAgent
+        };
+        if(!payload.full_name){ alert('أدخل الاسم الكامل'); return }
+        try{
+          const res = await fetch(EP, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+          if(!res.ok){ throw new Error('HTTP '+res.status) }
+          ok.style.display='block'; nameInput.value=''; secInput.value='';
+        }catch(e){ alert('تعذّر الإرسال. تحقق من الإعدادات/الإنترنت.'); }
+      };
+    })();
+  </script>
+</body>
+</html>
