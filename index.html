@@ -1,45 +1,172 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>لوحة الأستاذ – حضور بالـ QR</title>
+  <style>
+    :root{--bg:#0b1020;--card:#141a2f;--text:#eef2ff;--muted:#9aa4c7;--accent:#5da8ff}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:tahoma,arial,sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:960px;margin:0 auto;padding:18px}
+    .card{background:var(--card);border-radius:16px;padding:16px;margin:10px 0;box-shadow:0 6px 20px #0006}
+    h1,h2{margin:0 0 10px}
+    label{display:block;margin:10px 0 6px}
+    input{width:100%;padding:10px;border-radius:10px;border:1px solid #2a3358;background:#0f1530;color:#fff}
+    button{padding:10px 16px;border-radius:12px;border:none;background:var(--accent);color:#00112b;font-weight:700;cursor:pointer}
+    .row{display:flex;gap:12px;flex-wrap:wrap}.col{flex:1 1 260px}
+    .muted{color:var(--muted);font-size:12px}
+    .qrbox{display:none;align-items:center;gap:16px;flex-wrap:wrap}
+    img.qr{background:#fff;border-radius:12px;padding:8px}
+    .pill{display:inline-block;background:#0f1530;border:1px solid #2a3358;padding:6px 10px;border-radius:999px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid #2a3358;text-align:right}
+    th{color:#b9c8ff}
+    #tblwrap{display:none}
+  </style>
 </head>
 <body>
-  <h1>لوحة الأستاذ</h1>
+<div class="wrap">
+  <h1>لوحة الأستاذ – نظام حضور بالـ QR</h1>
 
-  <label>رابط Web App</label>
-  <input id="endpoint" placeholder="https://script.google.com/macros/s/.../exec">
+  <div class="card">
+    <h2>الإعداد</h2>
+    <div class="row">
+      <div class="col">
+        <label>رابط Web App (Google Apps Script)</label>
+        <input id="ep" placeholder="https://script.google.com/macros/s/.../exec">
+        <div class="muted">ألصق رابط النشر من Apps Script. يُحفظ محليًا في هذا المتصفح.</div>
+      </div>
+      <div class="col">
+        <label>رمز الجلسة</label>
+        <input id="sess" placeholder="مثال: A5K9Q">
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <label>اسم المحاضرة</label>
+        <input id="ltitle" placeholder="مثال: محاضرة 5 – إنتاج البذور">
+      </div>
+      <div class="col">
+        <label>تاريخ المحاضرة</label>
+        <input id="ldate" type="date">
+      </div>
+    </div>
+    <div style="margin:10px 0;display:flex;gap:8px;flex-wrap:wrap">
+      <button id="newBtn">جلسة جديدة + QR</button>
+      <button id="listBtn">جلب الحضور</button>
+      <button id="csvBtn">تصدير CSV</button>
+    </div>
 
-  <label>رمز الجلسة</label>
-  <input id="session">
-
-  <label>اسم المحاضرة</label>
-  <input id="lectureTitle">
-
-  <label>تاريخ المحاضرة</label>
-  <input id="lectureDate" type="date">
-
-  <button id="btnNew">جلسة جديدة + QR</button>
-  <button id="btnList">جلب الحضور</button>
-  <button id="btnCsv">تصدير CSV</button>
-
-  <div id="qrWrap" style="display:none">
-    <img id="qr" width="220" height="220">
-    <div id="studentLink"></div>
+    <div id="qrwrap" class="qrbox">
+      <img id="qr" class="qr" width="220" height="220" alt="QR">
+      <div>
+        <div class="pill" id="studentLink"></div>
+        <div class="muted">اعرض الـ QR على الشاشة؛ الطلاب يمسحون الكود ويفتح لهم نموذج الطالب مباشرة.</div>
+      </div>
+    </div>
   </div>
 
-  <table id="tbl" border="1" style="display:none">
-    <thead>
-      <tr>
-        <th>#</th><th>الاسم</th><th>الشعبة</th><th>الوقت</th><th>المحاضرة</th><th>تاريخها</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div class="card" id="tblwrap">
+    <h2>قائمة الحضور</h2>
+    <table id="tbl">
+      <thead>
+        <tr><th>#</th><th>الاسم</th><th>الشعبة</th><th>الوقت</th><th>المحاضرة</th><th>تاريخها</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
 
 <script>
-// الكود الجافاسكربت يوضع هنا (مختصرته حتى ما يطول الرد)
-// مسؤول عن إنشاء QR، حفظ البيانات محلياً، جلب قائمة الحضور وتصدير CSV
+(function(){
+  // عناصر
+  const ep     = document.getElementById('ep');
+  const sess   = document.getElementById('sess');
+  const ltitle = document.getElementById('ltitle');
+  const ldate  = document.getElementById('ldate');
+  const newBtn = document.getElementById('newBtn');
+  const listBtn= document.getElementById('listBtn');
+  const csvBtn = document.getElementById('csvBtn');
+  const qrwrap = document.getElementById('qrwrap');
+  const qr     = document.getElementById('qr');
+  const studentLink = document.getElementById('studentLink');
+  const tblwrap= document.getElementById('tblwrap');
+  const tbody  = document.querySelector('#tbl tbody');
+
+  // تحميل/حفظ محلي
+  ep.value     = localStorage.getItem('qr_ep')    || '';
+  sess.value   = localStorage.getItem('qr_sess')  || '';
+  ltitle.value = localStorage.getItem('qr_title') || '';
+  ldate.value  = localStorage.getItem('qr_date')  || new Date().toISOString().slice(0,10);
+  const save = () => {
+    localStorage.setItem('qr_ep', ep.value.trim());
+    localStorage.setItem('qr_sess', sess.value.trim());
+    localStorage.setItem('qr_title', ltitle.value.trim());
+    localStorage.setItem('qr_date', ldate.value);
+  };
+  ['change','keyup'].forEach(ev=>{
+    ep.addEventListener(ev, save); sess.addEventListener(ev, save);
+    ltitle.addEventListener(ev, save); ldate.addEventListener(ev, save);
+  });
+
+  // أدوات
+  function randCode(n=5){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<n;i++)s+=c[Math.floor(Math.random()*c.length)];return s;}
+  function buildStudentURL(){
+    const base = new URL('student.html', location.href);
+    base.searchParams.set('s',  sess.value.trim());
+    base.searchParams.set('t',  ltitle.value.trim());
+    base.searchParams.set('d',  ldate.value);
+    base.searchParams.set('ep', ep.value.trim()); // نمرر رابط Web App للطالب
+    return base.toString();
+  }
+  function showQR(url){
+    const api = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(url);
+    qr.src = api; qrwrap.style.display='flex'; studentLink.textContent = url;
+  }
+  function renderRows(rows){
+    tbody.innerHTML='';
+    rows.forEach((r,i)=>{
+      const tr=document.createElement('tr');
+      [i+1, r.full_name||'', r.section||'', r.timestamp||'', r.lecture_title||'', r.lecture_date||'']
+        .forEach(val=>{const td=document.createElement('td'); td.textContent=val; tr.appendChild(td);});
+      tbody.appendChild(tr);
+    });
+    tblwrap.style.display = rows.length ? 'block' : 'none';
+  }
+
+  // أزرار
+  newBtn.onclick = ()=>{
+    if(!ep.value.trim())       return alert('أدخل رابط Web App أولاً');
+    if(!ltitle.value.trim())   return alert('أدخل اسم المحاضرة');
+    if(!ldate.value)           return alert('اختر تاريخ المحاضرة');
+    if(!sess.value.trim())     sess.value = randCode();
+    save();
+    showQR(buildStudentURL());
+  };
+
+  listBtn.onclick = async ()=>{
+    if(!ep.value.trim() || !sess.value.trim()) return alert('أدخل رابط Web App ورمز الجلسة');
+    const url = ep.value.trim() + '?mode=list&s=' + encodeURIComponent(sess.value.trim());
+    try{
+      const res = await fetch(url);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const json = await res.json();
+      renderRows(json.rows||[]);
+    }catch(e){
+      alert('تعذر الجلب. تأكد من نشر Apps Script (Anyone with the link).');
+    }
+  };
+
+  csvBtn.onclick = ()=>{
+    const rows = [...tbody.querySelectorAll('tr')].map(tr=>[...tr.children].map(td=>td.textContent));
+    const header = '#,Full Name,Section,Timestamp,Lecture Title,Lecture Date';
+    const csv = [header].concat(rows.map(r=>r.join(','))).join('\n');
+    const blob = new Blob(["\ufeff"+csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download = 'attendance_'+(sess.value||'session')+'.csv'; a.click();
+  };
+})();
 </script>
 </body>
 </html>
