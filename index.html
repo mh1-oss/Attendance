@@ -35,7 +35,7 @@
         <div class="col">
           <label>رابط الـ Web App (Apps Script)</label>
           <input id="endpoint" placeholder="https://script.google.com/macros/s/.../exec" />
-          <div class="muted" style="font-size:12px">أكتب رابط نشر Apps Script. يُحفظ محليًا.</div>
+          <div class="muted" style="font-size:12px">انسخ رابط النشر من Apps Script. يُحفظ محليًا.</div>
         </div>
         <div class="col">
           <label>رمز الجلسة</label>
@@ -78,97 +78,95 @@
   </div>
 
   <script>
-    (function(){
-      const endpoint = document.getElementById('endpoint');
-      const session = document.getElementById('session');
-      const lectureTitle = document.getElementById('lectureTitle');
-      const lectureDate = document.getElementById('lectureDate');
-      const btnNew = document.getElementById('btnNew');
-      const btnList = document.getElementById('btnList');
-      const btnCsv = document.getElementById('btnCsv');
-      const qrWrap = document.getElementById('qrWrap');
-      const qrImg = document.getElementById('qr');
-      const studentLink = document.getElementById('studentLink');
-      const tableWrap = document.getElementById('tableWrap');
-      const tbody = document.querySelector('#tbl tbody');
+  (function(){
+    const endpoint = document.getElementById('endpoint');
+    const session = document.getElementById('session');
+    const lectureTitle = document.getElementById('lectureTitle');
+    const lectureDate = document.getElementById('lectureDate');
+    const btnNew = document.getElementById('btnNew');
+    const btnList = document.getElementById('btnList');
+    const btnCsv = document.getElementById('btnCsv');
+    const qrWrap = document.getElementById('qrWrap');
+    const qrImg = document.getElementById('qr');
+    const studentLink = document.getElementById('studentLink');
+    const tableWrap = document.getElementById('tableWrap');
+    const tbody = document.querySelector('#tbl tbody');
 
-      // حفظ محلي
-      endpoint.value = localStorage.getItem('qr_ep') || '';
-      session.value = localStorage.getItem('qr_sess') || '';
-      lectureTitle.value = localStorage.getItem('qr_title') || '';
-      lectureDate.value = localStorage.getItem('qr_date') || new Date().toISOString().slice(0,10);
-      function save(){
-        localStorage.setItem('qr_ep', endpoint.value.trim());
-        localStorage.setItem('qr_sess', session.value.trim());
-        localStorage.setItem('qr_title', lectureTitle.value.trim());
-        localStorage.setItem('qr_date', lectureDate.value);
-      }
-      ['change','keyup'].forEach(ev=>{
-        endpoint.addEventListener(ev, save);
-        session.addEventListener(ev, save);
-        lectureTitle.addEventListener(ev, save);
-        lectureDate.addEventListener(ev, save);
+    // حفظ محلي
+    endpoint.value = localStorage.getItem('qr_ep') || '';
+    session.value = localStorage.getItem('qr_sess') || '';
+    lectureTitle.value = localStorage.getItem('qr_title') || '';
+    lectureDate.value = localStorage.getItem('qr_date') || new Date().toISOString().slice(0,10);
+    function save(){
+      localStorage.setItem('qr_ep', endpoint.value.trim());
+      localStorage.setItem('qr_sess', session.value.trim());
+      localStorage.setItem('qr_title', lectureTitle.value.trim());
+      localStorage.setItem('qr_date', lectureDate.value);
+    }
+    ['change','keyup'].forEach(ev=>{
+      endpoint.addEventListener(ev, save);
+      session.addEventListener(ev, save);
+      lectureTitle.addEventListener(ev, save);
+      lectureDate.addEventListener(ev, save);
+    });
+
+    function randCode(len=5){
+      const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s='';
+      for(let i=0;i<len;i++) s+=c[Math.floor(Math.random()*c.length)];
+      return s;
+    }
+    function buildStudentURL(sess,title,date){
+      // يمرّر رابط الـWeb App داخل الرابط (ep=) حتى الطالب ما يحتاج يدخله
+      const base = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'student.html';
+      const ep = encodeURIComponent((endpoint.value||'').trim());
+      return base + `?s=${encodeURIComponent(sess)}&t=${encodeURIComponent(title)}&d=${encodeURIComponent(date)}&ep=${ep}`;
+    }
+    function setQR(url){
+      const api = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
+      qrImg.src = api; qrWrap.style.display='flex'; studentLink.textContent = url;
+    }
+
+    // جلسة جديدة + QR
+    btnNew.onclick = () => {
+      if(!endpoint.value.trim()){ alert('أدخل رابط Web App أولاً'); return }
+      if(!lectureTitle.value.trim()){ alert('أدخل اسم المحاضرة'); return }
+      if(!lectureDate.value){ alert('اختر تاريخ المحاضرة'); return }
+      if(!session.value.trim()) session.value = randCode();
+      save();
+      const url = buildStudentURL(session.value.trim(), lectureTitle.value.trim(), lectureDate.value);
+      setQR(url);
+    };
+
+    // جلب الحضور
+    btnList.onclick = async () => {
+      if(!endpoint.value.trim() || !session.value.trim()){ alert('أدخل رابط Web App ورمز الجلسة'); return }
+      const url = endpoint.value.trim() + '?mode=list&s=' + encodeURIComponent(session.value.trim());
+      const res = await fetch(url);
+      if(!res.ok){ alert('تعذّر الجلب – تحقق من النشر والصلاحيات'); return }
+      const json = await res.json();
+      renderRows(json.rows||[]);
+    };
+
+    function renderRows(rows){
+      tbody.innerHTML='';
+      rows.forEach((r,i)=>{
+        const tr=document.createElement('tr');
+        const cells=[i+1, r.full_name||'', r.section||'', r.timestamp||'', r.lecture_title||'', r.lecture_date||''];
+        cells.forEach(c=>{const td=document.createElement('td'); td.textContent=c; tr.appendChild(td);});
+        tbody.appendChild(tr);
       });
+      tableWrap.style.display = rows.length? 'block':'none';
+    }
 
-      function randCode(len=5){
-        const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s='';
-        for(let i=0;i<len;i++) s+=c[Math.floor(Math.random()*c.length)];
-        return s;
-      }
-      function buildStudentURL(sess,title,date){
-        // يفترض student.html في نفس المجلد
-        const base = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'student.html';
-        return base + `?s=${encodeURIComponent(sess)}&t=${encodeURIComponent(title)}&d=${encodeURIComponent(date)}`;
-      }
-      function setQR(url){
-        const api = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(url);
-        qrImg.src = api; qrWrap.style.display='flex'; studentLink.textContent = url;
-      }
-
-      // جلسة جديدة + QR
-      btnNew.onclick = () => {
-        if(!endpoint.value.trim()){ alert('أدخل رابط Web App أولاً'); return }
-        if(!lectureTitle.value.trim()){ alert('أدخل اسم المحاضرة'); return }
-        if(!lectureDate.value){ alert('اختر تاريخ المحاضرة'); return }
-        if(!session.value.trim()) session.value = randCode();
-        save();
-        const url = buildStudentURL(session.value.trim(), lectureTitle.value.trim(), lectureDate.value);
-        setQR(url);
-      };
-
-      // جلب الحضور
-      btnList.onclick = async () => {
-        if(!endpoint.value.trim() || !session.value.trim()){ alert('أدخل رابط Web App ورمز الجلسة'); return }
-        const url = endpoint.value.trim() + '?mode=list&s=' + encodeURIComponent(session.value.trim());
-        const res = await fetch(url);
-        if(!res.ok){ alert('تعذّر الجلب – تحقق من النشر والصلاحيات'); return }
-        const json = await res.json();
-        renderRows(json.rows || []);
-      };
-
-      function renderRows(rows){
-        tbody.innerHTML='';
-        rows.forEach((r,i)=>{
-          const tr=document.createElement('tr');
-          const cells=[i+1, r.full_name||'', r.section||'', r.timestamp||'', r.lecture_title||'', r.lecture_date||''];
-          cells.forEach(c=>{const td=document.createElement('td'); td.textContent=c; tr.appendChild(td);});
-          tbody.appendChild(tr);
-        });
-        tableWrap.style.display = rows.length ? 'block' : 'none';
-      }
-
-      // تصدير CSV
-      btnCsv.onclick = () => {
-        const rows=[...tbody.querySelectorAll('tr')].map(tr=>[...tr.children].map(td=>td.textContent));
-        const header = '#,Full Name,Section,Timestamp,Lecture Title,Lecture Date';
-        const csv = [header].concat(rows.map(r=>r.join(','))).join('\n');
-        const blob = new Blob(["\ufeff"+csv], {type:'text/csv;charset=utf-8;'});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'attendance_'+(session.value||'session')+'.csv';
-        a.click();
-      };
-    })();
+    // تصدير CSV
+    btnCsv.onclick = () => {
+      const rows=[...tbody.querySelectorAll('tr')].map(tr=>[...tr.children].map(td=>td.textContent));
+      const header='#,Full Name,Section,Timestamp,Lecture Title,Lecture Date';
+      const csv=[header].concat(rows.map(r=>r.join(','))).join('\n');
+      const blob=new Blob(["\ufeff"+csv],{type:'text/csv;charset=utf-8;'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='attendance_'+(session.value||'session')+'.csv'; a.click();
+    };
+  })();
   </script>
 </body>
 </html>
