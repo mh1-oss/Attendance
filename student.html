@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>تسجيل الحضور — توليد QR</title>
 <style>
-  :root{--bg:#0b1020;--card:#141a2f;--text:#eef2ff;--muted:#9aa4c7;--accent:#5da8ff}
-  *{box-sizing:border-box}
-  body{margin:0;font-family:tahoma,arial,sans-serif;background:#0b1020;color:#eef2ff}
-  .wrap{max-width:640px;margin:0 auto;padding:18px}
-  .card{background:#141a2f;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 6px 20px #0006}
-  label{display:block;margin:10px 0 6px}
-  input{width:100%;padding:10px;border-radius:10px;border:1px solid #2a3358;background:#0f1530;color:#fff}
-  button{padding:10px 16px;border-radius:12px;border:none;background:#5da8ff;color:#00112b;font-weight:700;cursor:pointer}
-  .muted{color:#9aa4c7;font-size:12px}
+  :root{--bg:#f7f9fc; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e5e7eb; --accent:#2563eb}
+  *{box-sizing:border-box} body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  .wrap{max-width:680px;margin:0 auto;padding:20px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 10px rgba(15,23,42,.06)}
+  label{display:block;margin:8px 0 6px;font-size:14px;color:var(--muted)}
+  input{width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--text)}
   .row{display:flex;gap:12px;flex-wrap:wrap}.col{flex:1 1 240px}
-  img.qr{background:#fff;border-radius:12px;padding:8px;margin-top:10px}
-  .pill{display:inline-block;background:#0f1530;border:1px solid #2a3358;padding:6px 10px;border-radius:999px}
+  button{padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:#eef2ff;color:#111827;cursor:pointer}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .muted{color:var(--muted);font-size:13px}
+  img.qr{background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px;margin-top:10px}
+  .pill{display:inline-block;background:#eef2ff;border:1px solid var(--border);padding:6px 10px;border-radius:999px}
 </style>
 </head>
 <body>
@@ -25,7 +25,7 @@
   <div class="card">
     <div class="row">
       <div class="col">
-        <label>رمز الجلسة (من الأستاذ)</label>
+        <label>كود الجلسة (من الأستاذ)</label>
         <input id="sess" placeholder="مثال: A5K9Q">
       </div>
       <div class="col">
@@ -44,15 +44,14 @@
       </div>
     </div>
 
-    <div class="muted">اضغط توليد، ثم اعرض الـ QR أمام كاميرا الأستاذ.</div>
+    <div class="muted">اضغط “توليد QR” ثم اعرض الكود أمام كاميرا الأستاذ.</div>
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-      <button id="gen">توليد QR</button>
+      <button id="gen" class="primary">توليد QR</button>
       <button id="regen">تجديد المُعرّف</button>
     </div>
 
     <div id="qrbox" style="display:none">
-      <p class="muted">هذا هو QR الخاص بك. لا تشاركه.</p>
-      <img id="qr" class="qr" width="220" height="220" alt="QR">
+      <img id="qr" class="qr" width="260" height="260" alt="QR">
       <div class="pill" id="preview" style="margin-top:8px"></div>
     </div>
   </div>
@@ -62,8 +61,7 @@
 (function(){
   const P = new URLSearchParams(location.search);
   const S_HINT = (P.get('s')||'').trim();
-  const sess = document.getElementById('sess');
-  if(S_HINT) sess.value = S_HINT;
+  const sess = document.getElementById('sess'); if(S_HINT) sess.value = S_HINT;
 
   const full = document.getElementById('full');
   const sec  = document.getElementById('sec');
@@ -72,9 +70,7 @@
   const qrbox= document.getElementById('qrbox');
   const preview = document.getElementById('preview');
 
-  function newId(){
-    return 'S-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8).toUpperCase();
-  }
+  function newId(){ return 'S-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8).toUpperCase(); }
   uid.value = localStorage.getItem('stu_uid') || newId();
   document.getElementById('regen').onclick = ()=>{ uid.value = newId(); localStorage.setItem('stu_uid', uid.value); };
 
@@ -85,9 +81,8 @@
       full_name: (full.value||'').trim(),
       section: (sec.value||'').trim()
     };
-    if(!payload.session)  return alert('أدخل رمز الجلسة');
+    if(!payload.session)  return alert('أدخل كود الجلسة');
     if(!payload.full_name)return alert('أدخل الاسم الكامل');
-
     const text = JSON.stringify(payload);
     const api  = 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=' + encodeURIComponent(text);
     qr.src = api;
