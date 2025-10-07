@@ -8,16 +8,21 @@
   :root{
     --bg:#f7f9fc; --card:#ffffff; --text:#0f172a; --muted:#64748b; --accent:#2563eb;
     --border:#e5e7eb; --ok:#16a34a; --bad:#dc2626; --chip:#eef2ff;
+    --shadow:0 2px 10px rgba(15,23,42,.06);
   }
-  *{box-sizing:border-box} body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
-  .wrap{max-width:1000px;margin:0 auto;padding:20px}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 10px rgba(15,23,42,.06)}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  .wrap{max-width:1100px;margin:0 auto;padding:22px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin:12px 0;box-shadow:var(--shadow);animation:pop .25s ease}
   h1{margin:0 0 10px;font-size:22px} h2{margin:0 0 10px;font-size:18px}
   label{display:block;margin:8px 0 6px;font-size:14px;color:var(--muted)}
-  input,select{width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--text)}
+  input,select{width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:#fff;color:var(--text);transition:border .15s}
+  input:focus,select:focus{outline:none;border-color:#93c5fd;box-shadow:0 0 0 3px #dbeafe}
   .row{display:flex;gap:12px;flex-wrap:wrap}.col{flex:1 1 240px}
   .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-  button{padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:var(--chip);color:#111827;cursor:pointer}
+  button{padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:var(--chip);color:#111827;cursor:pointer;transition:transform .06s ease, box-shadow .2s ease}
+  button:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(0,0,0,.06)}
+  button:active{transform:translateY(0)}
   button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   button.danger{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
   .muted{color:var(--muted);font-size:13px}
@@ -27,13 +32,20 @@
   th,td{padding:10px;border-bottom:1px solid var(--border);text-align:right}
   th{background:#fafafa;color:#111827}
   #stuQRWrap{display:none;align-items:center;gap:16px;flex-wrap:wrap}
-  img.qr{background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px;cursor:pointer}
-  #toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;
-         padding:12px 16px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.1);display:none;font-weight:600}
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:16px}
-  .modal img{max-width:95vw;max-height:90vh;background:#fff;border-radius:16px;padding:12px;border:1px solid var(--border)}
-  .switch{display:inline-flex;align-items:center;gap:8px}
-  .switch input{width:auto}
+  img.qr{background:#fff;border:1px solid var(--border);border-radius:12px;padding:8px;cursor:pointer;transition:transform .15s ease, box-shadow .2s}
+  img.qr:hover{transform:scale(1.02);box-shadow:0 12px 28px rgba(0,0,0,.08)}
+  #toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-20px);opacity:0;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;
+         padding:12px 16px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.1);display:block;font-weight:600;pointer-events:none;transition:opacity .25s, transform .25s}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;padding:16px;animation:fade .2s ease}
+  .modal img{max-width:95vw;max-height:90vh;background:#fff;border-radius:16px;padding:12px;border:1px solid var(--border);animation:pop .2s ease}
+  td[contenteditable="true"]{outline:2px solid transparent;transition:background .15s}
+  td[contenteditable="true"]:focus{outline:2px solid #bfdbfe;background:#eff6ff}
+  tr.flash{animation:flash .6s ease}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  @keyframes flash{0%{background:#ecfeff}100%{background:transparent}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes pop{from{transform:scale(.98);opacity:.0}to{transform:scale(1);opacity:1}}
 </style>
 </head>
 <body>
@@ -48,7 +60,7 @@
         <input id="sess" placeholder="مثال: A5K9Q">
       </div>
       <div class="col">
-        <label>اسم المحاضرة</label>
+        <label>عنوان المحاضرة</label>
         <input id="ltitle" placeholder="مثال: محاضرة 5 — إنتاج البذور">
       </div>
       <div class="col">
@@ -58,8 +70,8 @@
       <div class="col">
         <label>سياسة التكرارات</label>
         <div class="switch">
-          <input type="checkbox" id="noDup">
-          <span class="muted">منع التكرارات (مُستحسن)</span>
+          <input type="checkbox" id="noDup" style="width:auto">
+          <span class="muted">منع التكرارات (الجهاز الواحد = حضور واحد)</span>
         </div>
       </div>
     </div>
@@ -70,7 +82,7 @@
       <button id="csvBtn">تصدير CSV</button>
       <button id="endBtn" class="danger">إنهاء الجلسة</button>
     </div>
-    <div class="muted">اطلب من الطلاب فتح صفحتهم عبر مسح الـ QR التالي أو إدخال كود الجلسة.</div>
+    <div class="muted">أكمل **الكود + العنوان + التاريخ** قبل إظهار QR أو تشغيل الماسح.</div>
 
     <div id="stuQRWrap" style="margin-top:10px">
       <div>
@@ -99,14 +111,22 @@
 
   <div class="card">
     <h2>قائمة الحضور <span id="count" class="pill">0</span></h2>
+
+    <div class="filters">
+      <input id="fName" placeholder="فلتر الاسم">
+      <input id="fSec" placeholder="فلتر الشعبة">
+      <button id="clearFilters">تنظيف الفلاتر</button>
+    </div>
+
     <table>
       <thead>
         <tr>
-          <th>No.</th><th>Full Name</th><th>Section</th><th>Timestamp</th><th>Lecture Title</th><th>Lecture Date</th><th>Session</th><th>ID</th>
+          <th>No.</th><th>Full Name</th><th>Section</th><th>Date</th><th>Lecture Title</th><th>Lecture Date</th><th>Session</th><th>ID</th><th>Actions</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
     </table>
+    <div class="muted">الاسم قابل للتعديل (انقر على الخلية). استخدم الفلاتر للبحث السريع.</div>
   </div>
 </div>
 
@@ -121,12 +141,14 @@
   const ltitle = document.getElementById('ltitle');
   const ldate  = document.getElementById('ldate');
   const noDup  = document.getElementById('noDup');
+
   const showStuQR = document.getElementById('showStuQR');
   const stuQRWrap = document.getElementById('stuQRWrap');
   const stuQR  = document.getElementById('stuQR');
   const stuLink= document.getElementById('stuLink');
   const qrModal= document.getElementById('qrModal');
   const qrBig  = document.getElementById('qrBig');
+
   const status = document.getElementById('status');
   const video  = document.getElementById('video');
   const canvas = document.getElementById('canvas');
@@ -141,35 +163,123 @@
   const toast    = document.getElementById('toast');
   const toastName= document.getElementById('toastName');
 
-  // تخزين محلي: استرجاع
+  const fName = document.getElementById('fName');
+  const fSec  = document.getElementById('fSec');
+  const clearFilters = document.getElementById('clearFilters');
+
+  // أدوات
+  function todayISO(){ return new Date().toISOString().slice(0,10); } // تاريخ فقط
   function randCode(n=5){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<n;i++) s+=c[Math.floor(Math.random()*c.length)];return s;}
-  const STORE_KEY = 'qr_att_rows_v2';
+  function ok(v){ return (v||'').trim().length>0; }
+  function requireFields(){
+    if(!ok(sess.value))  { alert('أدخل/تأكّد من كود الجلسة'); return false; }
+    if(!ok(ltitle.value)){ alert('أدخل عنوان المحاضرة'); return false; }
+    if(!ok(ldate.value)) { alert('أدخل تاريخ المحاضرة'); return false; }
+    return true;
+  }
+
+  // تخزين
+  const STORE_KEY = 'qr_att_rows_v4';
+  const SEEN_STRICT_KEY = 'qr_seen_strict_v4';
+  const SEEN_BY_DEVICE_KEY = 'qr_seen_device_v4';
+
   const rows = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
-  const seen = new Set(JSON.parse(localStorage.getItem('qr_seen_v2') || '[]'));
+  const seenStrict = new Set(JSON.parse(localStorage.getItem(SEEN_STRICT_KEY) || '[]'));
+  const seenByDevice = new Set(JSON.parse(localStorage.getItem(SEEN_BY_DEVICE_KEY) || '[]'));
+
+  // استرجاع الحقول
   sess.value   = localStorage.getItem('qr_sess')  || randCode();
   ltitle.value = localStorage.getItem('qr_title') || '';
-  ldate.value  = localStorage.getItem('qr_date')  || new Date().toISOString().slice(0,10);
+  ldate.value  = localStorage.getItem('qr_date')  || todayISO();
   noDup.checked= (localStorage.getItem('qr_noDup') ?? '1') === '1';
 
-  // إعادة رسم الجدول من التخزين
-  function redraw(){
+  // رسم الجدول
+  function rowKey(rec){ // s::id::name::section (strict)
+    const ss=(rec.session||'').trim(), id=(rec.id||'').trim();
+    const nm=(rec.full_name||'').trim(), sc=(rec.section||'').trim();
+    return `${ss}::${id}::${nm}::${sc}`;
+  }
+  function deviceKey(rec){ return `${(rec.session||'').trim()}::${(rec.id||'').trim()}`; }
+
+  function drawRows(){
+    const nf = (fName.value||'').trim().toLowerCase();
+    const sf = (fSec.value||'').trim().toLowerCase();
     tbody.innerHTML='';
     rows.forEach((rec,i)=>{
+      if(nf && !String(rec.full_name).toLowerCase().includes(nf)) return;
+      if(sf && !String(rec.section).toLowerCase().includes(sf)) return;
+
       const tr=document.createElement('tr');
-      [i+1, rec.full_name, rec.section, rec.timestamp, rec.lecture_title, rec.lecture_date, rec.session, rec.id]
-        .forEach(v => { const td=document.createElement('td'); td.textContent=v; tr.appendChild(td); });
+
+      // No.
+      let td0=document.createElement('td'); td0.textContent=i+1; tr.appendChild(td0);
+
+      // Name editable
+      let td1=document.createElement('td'); td1.contentEditable="true"; td1.textContent=rec.full_name;
+      td1.addEventListener('blur', ()=>{
+        const v = td1.textContent.trim();
+        if(!v){ alert('الاسم لا يمكن أن يكون فارغًا'); td1.textContent=rec.full_name; return; }
+        // إزالة مفتاح strict القديم ثم إعادة إضافته بالجديد
+        const oldKey = rowKey(rec);
+        seenStrict.delete(oldKey);
+        rec.full_name = v;
+        const newKey = rowKey(rec);
+        seenStrict.add(newKey);
+        persistSeen();
+        persistRows();
+      });
+      tr.appendChild(td1);
+
+      // Section
+      const td2=document.createElement('td'); td2.textContent=rec.section||''; tr.appendChild(td2);
+      // Date (تاريخ حضور)
+      const td3=document.createElement('td'); td3.textContent=rec.timestamp||''; tr.appendChild(td3);
+      // Lecture Title
+      const td4=document.createElement('td'); td4.textContent=rec.lecture_title||''; tr.appendChild(td4);
+      // Lecture Date
+      const td5=document.createElement('td'); td5.textContent=rec.lecture_date||''; tr.appendChild(td5);
+      // Session
+      const td6=document.createElement('td'); td6.textContent=rec.session||''; tr.appendChild(td6);
+      // ID
+      const td7=document.createElement('td'); td7.textContent=rec.id||''; tr.appendChild(td7);
+
+      // Actions: حذف
+      const td8=document.createElement('td');
+      const del=document.createElement('button');
+      del.textContent='حذف';
+      del.className='danger';
+      del.onclick=()=>{
+        if(!confirm('حذف هذا السطر؟')) return;
+        // إزالة من rows
+        const idx = rows.indexOf(rec);
+        if(idx>-1) rows.splice(idx,1);
+        // إزالة من seen sets للسماح بإعادة المسح عند الحاجة
+        seenStrict.delete(rowKey(rec));
+        seenByDevice.delete(deviceKey(rec));
+        persistSeen();
+        persistRows();
+        drawRows();
+        countEl.textContent = rows.length;
+      };
+      td8.appendChild(del); tr.appendChild(td8);
+
       tbody.appendChild(tr);
     });
     countEl.textContent = rows.length;
   }
-  redraw();
+  function persistRows(){ localStorage.setItem(STORE_KEY, JSON.stringify(rows)); }
+  function persistSeen(){
+    localStorage.setItem(SEEN_STRICT_KEY, JSON.stringify(Array.from(seenStrict)));
+    localStorage.setItem(SEEN_BY_DEVICE_KEY, JSON.stringify(Array.from(seenByDevice)));
+  }
+  drawRows();
 
-  // حفظ فوري للحقل
+  // حفظ الحقول
   [sess,ltitle,ldate,noDup].forEach(el=>{
     el.addEventListener('change', ()=>{
       if(el===noDup) localStorage.setItem('qr_noDup', noDup.checked ? '1':'0');
       else{
-        if(!sess.value.trim()) sess.value = randCode();
+        if(!ok(sess.value)) sess.value=randCode();
         localStorage.setItem('qr_sess',  sess.value.trim());
         localStorage.setItem('qr_title', ltitle.value.trim());
         localStorage.setItem('qr_date',  ldate.value);
@@ -177,74 +287,133 @@
     });
   });
 
-  // صوت نجاح — نحاول Audio، وإن فشل نستعمل WebAudio
-  async function playBeep(){
+  // فلاتر
+  [fName,fSec].forEach(el=>el.addEventListener('input', drawRows));
+  clearFilters.onclick = ()=>{ fName.value=''; fSec.value=''; drawRows(); };
+
+  // أصوات (WebAudio): نجاح/خطأ
+  function beep(freq=880, ms=130, vol=0.02){
     try{
-      // موجة ساين قصيرة عبر WebAudio (مضمونة)
-      const ctx = new (window.AudioContext||window.webkitAudioContext)();
-      const o = ctx.createOscillator(); const g = ctx.createGain();
-      o.type='sine'; o.frequency.value=880; g.gain.value=0.001; // مستوى منخفض ومريح
-      o.connect(g).connect(ctx.destination);
-      o.start(); g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.12);
-      o.stop(ctx.currentTime+0.13);
-    }catch(e){/* تجاهل */}
+      const ac = new (window.AudioContext||window.webkitAudioContext)();
+      const o = ac.createOscillator(); const g = ac.createGain();
+      o.type='sine'; o.frequency.value=freq; g.gain.value=vol;
+      o.connect(g).connect(ac.destination);
+      o.start(); g.gain.exponentialRampToValueAtTime(0.00001, ac.currentTime + ms/1000);
+      o.stop(ac.currentTime + ms/1000 + 0.01);
+    }catch(e){}
+  }
+  const successBeep = ()=>beep(920,140,0.03);
+  const errorBeep   = ()=>{beep(220,120,0.03); setTimeout(()=>beep(180,120,0.03),120);};
+
+  // توست
+  function showToast(name, ok=true){
+    toast.textContent = (ok?'✅ تمت إضافة: ':'❌ ') + (name||'');
+    toast.style.background = ok ? '#ecfdf5' : '#fee2e2';
+    toast.style.color = ok ? '#065f46' : '#991b1b';
+    toast.style.borderColor = ok ? '#a7f3d0' : '#fecaca';
+    toast.classList.add('show');
+    setTimeout(()=>toast.classList.remove('show'), 1500);
   }
 
-  // مفتاح تكرارات بحسب سياسة الأستاذ
-  function makeKey(obj){
-    const sid = (obj.id||'').trim();
-    const ss  = (obj.session||'').trim();
-    if(sid && ss) return ss+'::'+sid;
-    return ss+'::'+(obj.full_name||'').trim()+'::'+(obj.section||'').trim();
+  // سياسة التكرارات
+  function strictKey(obj){
+    const ss=(obj.session||'').trim(), id=(obj.id||'').trim();
+    const nm=(obj.full_name||'').trim(), sc=(obj.section||'').trim();
+    return `${ss}::${id}::${nm}::${sc}`;
+  }
+  function deviceOnlyKey(obj){
+    return `${(obj.session||'').trim()}::${(obj.id||'').trim()}`;
   }
 
   function addRowFromQR(obj){
     const rec = {
       id: obj.id || '',
       session: obj.session || sess.value.trim(),
-      full_name: obj.full_name || '',
-      section: obj.section || '',
-      timestamp: new Date().toLocaleString(),
+      full_name: (obj.full_name||'').trim(),
+      section: (obj.section||'').trim(),
+      timestamp: todayISO(),                 // تاريخ فقط
       lecture_title: ltitle.value.trim(),
       lecture_date: ldate.value
     };
-    const key = makeKey(rec);
-    if(noDup.checked && seen.has(key)) return; // منع تكرار
-    if(!noDup.checked){
-      // عند السماح بالتكرار لا نضيف للمجموعة حتى لا تمنع لاحقًا
-    }else{
-      seen.add(key);
-      localStorage.setItem('qr_seen_v2', JSON.stringify(Array.from(seen)));
+
+    const sKey = strictKey(rec);
+    if(seenStrict.has(sKey)){ // نفس الـQR بالضبط
+      status.textContent = 'تم مسح نفس الكود مسبقًا لهذه الجلسة.';
+      errorBeep(); showToast('تمت قراءته مسبقًا', false);
+      return;
     }
-    rows.push(rec);
-    localStorage.setItem(STORE_KEY, JSON.stringify(rows));
-    const tr=document.createElement('tr');
-    [rows.length, rec.full_name, rec.section, rec.timestamp, rec.lecture_title, rec.lecture_date, rec.session, rec.id]
-      .forEach(v => { const td=document.createElement('td'); td.textContent=v; tr.appendChild(td); });
+    const dKey = deviceOnlyKey(rec);
+    if(noDup.checked && seenByDevice.has(dKey)){ // جهاز مسجّل مسبقًا
+      status.textContent = 'هذا الجهاز سجّل حضورًا لهذه الجلسة مسبقًا.';
+      errorBeep(); showToast('جهاز مكرر', false);
+      return;
+    }
+
+    // سجّل المفاتيح
+    seenStrict.add(sKey);
+    if(noDup.checked) seenByDevice.add(dKey);
+    persistSeen();
+
+    rows.push(rec); persistRows();
+
+    // رسم صف جديد مع فلاش
+    const tr=document.createElement('tr'); tr.className='flash';
+    const cells = [
+      rows.length, rec.full_name, rec.section, rec.timestamp,
+      rec.lecture_title, rec.lecture_date, rec.session, rec.id
+    ];
+    cells.forEach((v,idx)=>{
+      const td=document.createElement('td');
+      if(idx===1){ // الاسم قابل للتعديل
+        td.contentEditable="true"; td.textContent=rec.full_name;
+        td.addEventListener('blur', ()=>{
+          const val = td.textContent.trim();
+          if(!val){ alert('الاسم لا يمكن أن يكون فارغًا'); td.textContent=rec.full_name; return; }
+          // عدّل المفتاح الصارم
+          seenStrict.delete(rowKey(rec));
+          rec.full_name = val;
+          seenStrict.add(rowKey(rec));
+          persistSeen(); persistRows();
+        });
+      } else td.textContent=v;
+      tr.appendChild(td);
+    });
+    // Actions
+    const tdAct=document.createElement('td');
+    const del=document.createElement('button'); del.textContent='حذف'; del.className='danger';
+    del.onclick=()=>{
+      if(!confirm('حذف هذا السطر؟')) return;
+      const idx = rows.indexOf(rec);
+      if(idx>-1) rows.splice(idx,1);
+      // أزل من seen للسماح بإعادة المسح
+      seenStrict.delete(rowKey(rec));
+      seenByDevice.delete(deviceKey(rec));
+      persistSeen(); persistRows(); drawRows();
+      countEl.textContent = rows.length;
+    };
+    tdAct.appendChild(del); tr.appendChild(tdAct);
+
     tbody.appendChild(tr);
     countEl.textContent = rows.length;
 
-    toastName.textContent = rec.full_name || 'طالب';
-    toast.style.display = 'block';
-    setTimeout(()=>toast.style.display='none', 1500);
-    playBeep();
+    successBeep(); showToast(rec.full_name || 'طالب', true);
+    status.textContent = 'تمت الإضافة: ' + (rec.full_name||'');
   }
 
-  // QR للطلاب
+  // QR الطلاب (يمرّر العنوان والتاريخ)
   function buildStudentURL(){
     const u = new URL('student.html', location.href);
     u.searchParams.set('s', sess.value.trim());
+    u.searchParams.set('t', ltitle.value.trim());
+    u.searchParams.set('d', ldate.value);
     return u.toString();
   }
   function showStudentQR(){
-    if(!sess.value.trim()) sess.value = randCode();
-    localStorage.setItem('qr_sess', sess.value.trim());
+    if(!requireFields()) return;
     const link = buildStudentURL();
     const api  = 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=' + encodeURIComponent(link);
-    stuQR.src = api;
-    stuQRWrap.style.display = 'flex';
-    stuLink.textContent = link;
-    document.getElementById('qrBig').src = api.replace('320x320','640x640');
+    stuQR.src = api; stuQRWrap.style.display = 'flex'; stuLink.textContent = link;
+    qrBig.src = api.replace('320x320','640x640');
   }
   showStuQR.onclick = showStudentQR;
   stuQR.onclick = ()=>{ qrModal.style.display='flex'; };
@@ -264,6 +433,7 @@
   }
   let stream=null, anim=null;
   async function start(){
+    if(!requireFields()) return;
     try{
       await listCams();
       const constraints = {
@@ -276,6 +446,7 @@
       scanLoop();
     }catch(e){
       status.textContent = 'تعذّر تشغيل الكاميرا: '+e.message;
+      errorBeep();
     }
   }
   function stop(){
@@ -292,22 +463,25 @@
     if(code && code.data){
       try{
         const obj = JSON.parse(code.data);
-        if((obj.session||'').trim() !== sess.value.trim()){
-          status.textContent = 'QR لجلسة مختلفة!'; 
-        }else{
+        if(!obj || !obj.session || !obj.full_name){
+          status.textContent = 'QR ناقص معلومات'; errorBeep(); showToast('QR ناقص', false);
+        } else if((obj.session||'').trim() !== sess.value.trim()){
+          status.textContent = 'QR لجلسة مختلفة!'; errorBeep(); showToast('جلسة مختلفة', false);
+        } else {
           addRowFromQR(obj);
-          status.textContent = 'تمت الإضافة: ' + (obj.full_name||'');
         }
-      }catch(e){ status.textContent = 'QR غير صالح'; }
+      }catch(e){
+        status.textContent = 'QR غير صالح'; errorBeep(); showToast('QR غير صالح', false);
+      }
       await new Promise(r=>setTimeout(r, 800));
     }
     anim=requestAnimationFrame(scanLoop);
   }
   startBtn.onclick = start; stopBtn.onclick = stop;
 
-  // CSV نظيف
+  // CSV (تاريخ فقط)
   csvBtn.onclick = ()=>{
-    const header = ['No.','Full Name','Section','Timestamp','Lecture Title','Lecture Date','Session','ID'];
+    const header = ['No.','Full Name','Section','Date','Lecture Title','Lecture Date','Session','ID'];
     const data = rows.map((r,i)=>[i+1,r.full_name,r.section,r.timestamp,r.lecture_title,r.lecture_date,r.session,r.id]);
     const csv = [header.join(',')].concat(data.map(r=>r.map(x=>String(x).replace(/"/g,'""')).map(x=>`"${x}"`).join(','))).join('\n');
     const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
@@ -315,26 +489,32 @@
     a.download = 'attendance_'+(sess.value||'session')+'.csv'; a.click();
   };
 
-  // إنهاء الجلسة: تصفير كلشي
+  // إنهاء الجلسة: تصفير كلشي وتوليد كود جديد
   endBtn.onclick = ()=>{
     if(!confirm('تأكيد إنهاء الجلسة؟ سيتم تفريغ الحضور والمدخلات.')) return;
     localStorage.removeItem(STORE_KEY);
-    localStorage.removeItem('qr_seen_v2');
-    localStorage.removeItem('qr_title');
-    localStorage.removeItem('qr_date');
-    localStorage.removeItem('qr_sess');
-    localStorage.setItem('qr_noDup','1');
-    rows.splice(0,rows.length); seen.clear();
+    localStorage.removeItem(SEEN_STRICT_KEY);
+    localStorage.removeItem(SEEN_BY_DEVICE_KEY);
+    rows.splice(0,rows.length);
+    seenStrict.clear(); seenByDevice.clear();
     tbody.innerHTML=''; countEl.textContent='0';
-    ltitle.value=''; ldate.value=new Date().toISOString().slice(0,10);
-    noDup.checked=true;
+
+    noDup.checked = true; localStorage.setItem('qr_noDup','1');
+
+    ltitle.value=''; ldate.value=todayISO();
     sess.value = randCode();
-    showStuQR.click(); // يولّد QR جديد بسرعة
+    localStorage.setItem('qr_sess',sess.value);
+    localStorage.setItem('qr_title','');
+    localStorage.setItem('qr_date',ldate.value);
+
+    showStuQR.click();
     status.textContent = 'تم إنهاء الجلسة وتصفير البيانات.';
+    showToast('تم إنهاء الجلسة', true);
   };
 
-  // تهيئة سريعة
-  showStudentQR(); // يولّد QR منذ البداية لسهولة الدخول
+  // بدء مبدئي
+  if(!ldate.value) ldate.value = todayISO();
+  showStuQR.click();
 })();
 </script>
 </body>
