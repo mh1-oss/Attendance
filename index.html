@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>لوحة الأستاذ — ماسح حضور بالـ QR (بدون داتابيس)</title>
 <style>
-  :root{--bg:#0b1020;--card:#141a2f;--text:#eef2ff;--muted:#9aa4c7;--accent:#5da8ff}
+  :root{--bg:#0b1020;--card:#141a2f;--text:#eef2ff;--muted:#9aa4c7;--accent:#5da8ff;--ok:#30e08a;--bad:#ff7a86}
   *{box-sizing:border-box}
   body{margin:0;font-family:tahoma,arial,sans-serif;background:var(--bg);color:var(--text)}
   .wrap{max-width:980px;margin:0 auto;padding:18px}
@@ -22,7 +22,16 @@
   table{width:100%;border-collapse:collapse}
   th,td{padding:10px;border-bottom:1px solid #2a3358;text-align:right}
   th{color:#b9c8ff}
-  .ok{color:#8ef58e}.bad{color:#ff8e8e}
+  .ok{color:var(--ok)}.bad{color:var(--bad)}
+  /* QR الطالب الكبير */
+  .qrbox{display:none;align-items:center;gap:16px;flex-wrap:wrap}
+  img.qr{background:#fff;border-radius:12px;padding:8px;cursor:pointer}
+  /* توست */
+  #toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#1b2a3f;border:1px solid #2a3358;padding:12px 16px;border-radius:12px;box-shadow:0 6px 20px #0008;display:none;font-size:16px}
+  #toast.ok{border-color:#1f7b57}
+  /* Modal */
+  .modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;padding:16px}
+  .modal img{max-width:95vw;max-height:90vh;background:#fff;border-radius:16px;padding:12px}
 </style>
 </head>
 <body>
@@ -33,25 +42,34 @@
     <h2>إعداد الجلسة</h2>
     <div class="row">
       <div class="col">
-        <label>رمز الجلسة</label>
-        <input id="sess" placeholder="مثال: A5K9Q" />
+        <label>رمز الجلسة (يتولد تلقائياً)</label>
+        <input id="sess" placeholder="مثال: A5K9Q">
       </div>
       <div class="col">
         <label>اسم المحاضرة</label>
-        <input id="ltitle" placeholder="مثال: محاضرة 5 — إنتاج البذور" />
+        <input id="ltitle" placeholder="مثال: محاضرة 5 — إنتاج البذور">
       </div>
       <div class="col">
         <label>تاريخ المحاضرة</label>
-        <input id="ldate" type="date" />
+        <input id="ldate" type="date">
       </div>
     </div>
     <div class="controls">
+      <button id="showStuQR">إظهار QR لصفحة الطالب</button>
       <button id="startScan">تشغيل الماسح</button>
       <button id="stopScan">إيقاف</button>
       <button id="clearList">تفريغ القائمة</button>
-      <a id="studentLink" class="pill" href="student.html" target="_blank" rel="noopener">فتح صفحة الطالب</a>
     </div>
-    <div class="muted">انشر كود الجلسة للطلاب (شفهيًا أو على السبورة). كل طالب يولّد QR من صفحته.</div>
+    <div class="muted">اطلب من الطلاب فتح صفحتهم عبر مسح الـQR التالي أو إدخال كود الجلسة.</div>
+
+    <!-- QR يفتح صفحة الطالب مباشرة -->
+    <div id="stuQRWrap" class="qrbox" style="margin-top:10px">
+      <div>
+        <div class="muted">اضغط على صورة الـQR لتكبيرها على كامل الشاشة.</div>
+        <img id="stuQR" class="qr" width="220" height="220" alt="Student QR (open student.html)">
+        <div class="pill" id="stuLink"></div>
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -84,8 +102,18 @@
   </div>
 </div>
 
+<!-- توست -->
+<div id="toast" class="ok">✅ تمت إضافة: <span id="toastName"></span></div>
+<!-- Modal لتكبير QR -->
+<div id="qrModal" class="modal"><img id="qrBig" alt="QR كبير"></div>
+
 <!-- jsQR لفكّ شيفرة QR محلياً -->
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<!-- صوت نجاح (WAV صغير Base64) -->
+<audio id="beep">
+  <source src="data:audio/wav;base64,UklGRlQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABYAAAAAQU5BMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwAAAA" type="audio/wav">
+</audio>
+
 <script>
 (function(){
   const sess   = document.getElementById('sess');
@@ -102,30 +130,85 @@
   const csvBtn   = document.getElementById('csvBtn');
   const tbody    = document.getElementById('tbody');
   const countEl  = document.getElementById('count');
+  const beep     = document.getElementById('beep');
+  const toast    = document.getElementById('toast');
+  const toastName= document.getElementById('toastName');
 
-  // حفظ محلي
-  sess.value   = localStorage.getItem('qr_sess')  || '';
+  // QR الطالب الكبير
+  const showStuQR = document.getElementById('showStuQR');
+  const stuQRWrap = document.getElementById('stuQRWrap');
+  const stuQR     = document.getElementById('stuQR');
+  const stuLink   = document.getElementById('stuLink');
+  const qrModal   = document.getElementById('qrModal');
+  const qrBig     = document.getElementById('qrBig');
+
+  // حفظ محلي + كود تلقائي
+  function randCode(n=5){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<n;i++) s+=c[Math.floor(Math.random()*c.length)];return s;}
+  sess.value   = localStorage.getItem('qr_sess')  || randCode();
   ltitle.value = localStorage.getItem('qr_title') || '';
   ldate.value  = localStorage.getItem('qr_date')  || new Date().toISOString().slice(0,10);
   [sess,ltitle,ldate].forEach(el => el.addEventListener('change', save));
   function save(){
+    if(!sess.value.trim()) sess.value = randCode();
     localStorage.setItem('qr_sess',  sess.value.trim());
     localStorage.setItem('qr_title', ltitle.value.trim());
     localStorage.setItem('qr_date',  ldate.value);
   }
 
+  // إنشاء رابط و QR لصفحة الطالب
+  function buildStudentURL(){
+    const u = new URL('student.html', location.href);
+    u.searchParams.set('s', sess.value.trim());
+    // ملاحظة: الطالب لا يحتاج عنوان/تاريخ هنا، فقط الكود؛ ممكن نمررهم للعرض إن أردت
+    return u.toString();
+  }
+  function showStudentQR(){
+    if(!sess.value.trim()){ sess.value = randCode(); save(); }
+    const link = buildStudentURL();
+    const api  = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(link);
+    stuQR.src = api;
+    stuQRWrap.style.display = 'flex';
+    stuLink.textContent = link;
+    qrBig.src = api.replace('300x300','600x600');
+  }
+  showStuQR.onclick = showStudentQR;
+  stuQR.onclick = ()=>{ qrModal.style.display='flex'; };
+  qrModal.onclick = ()=>{ qrModal.style.display='none'; };
+
   // قائمة الحضور بالذاكرة
   const rows = [];
-  const seen = new Set(); // لتجنّب التكرار (بناءً على id فريد داخل الـQR)
+  const seen = new Set(); // يمنع التكرار
+  function makeKey(obj){
+    const sid = (obj.id||'').trim();
+    const ss  = (obj.session||'').trim();
+    if(sid && ss) return ss+'::'+sid;
+    // احتياط إذا طالب بدون id
+    return ss+'::'+(obj.full_name||'').trim()+'::'+(obj.section||'').trim();
+  }
   function addRow(r){
-    if(seen.has(r.id)) return; // مكرر
-    seen.add(r.id);
-    rows.push(r);
+    const key = makeKey(r);
+    if(seen.has(key)) return;
+    seen.add(key);
+    const rec = {
+      id: r.id || '',
+      session: r.session || sess.value.trim(),
+      full_name: r.full_name || '',
+      section: r.section || '',
+      timestamp: new Date().toLocaleString(),
+      lecture_title: ltitle.value.trim(),
+      lecture_date: ldate.value
+    };
+    rows.push(rec);
     const tr = document.createElement('tr');
-    [rows.length, r.full_name, r.section, r.timestamp, r.lecture_title, r.lecture_date]
+    [rows.length, rec.full_name, rec.section, rec.timestamp, rec.lecture_title, rec.lecture_date]
       .forEach(v => { const td=document.createElement('td'); td.textContent=v; tr.appendChild(td); });
     tbody.appendChild(tr);
     countEl.textContent = rows.length;
+    // توست + صوت
+    toastName.textContent = rec.full_name || 'طالب';
+    toast.style.display = 'block';
+    setTimeout(()=>toast.style.display='none', 1800);
+    beep.currentTime = 0; beep.play().catch(()=>{ /* silent */ });
   }
 
   // الكاميرات
@@ -144,8 +227,7 @@
   let stream = null, anim = null;
   async function start(){
     try{
-      if(!sess.value.trim()){ alert('اكتب رمز الجلسة أولاً'); return }
-      save();
+      if(!sess.value.trim()){ sess.value = randCode(); save(); }
       await listCams();
       const constraints = {
         video: camSel.value ? { deviceId: { exact: camSel.value } }
@@ -179,24 +261,16 @@
     if(code && code.data){
       try{
         const obj = JSON.parse(code.data);
-        // التحقق من الجلسة
         if((obj.session||'').trim() !== sess.value.trim()){
           status.innerHTML = '<span class="bad">QR لجلسة مختلفة!</span>';
         }else{
-          addRow({
-            id: obj.id, // فريد من الطالب
-            full_name: obj.full_name || '',
-            section:   obj.section   || '',
-            timestamp: new Date().toLocaleString(),
-            lecture_title: ltitle.value.trim(),
-            lecture_date:  ldate.value
-          });
+          addRow(obj);
           status.innerHTML = '<span class="ok">تمت الإضافة: '+(obj.full_name||'')+'</span>';
         }
       }catch(e){
         status.innerHTML = '<span class="bad">QR غير صالح</span>';
       }
-      // مهلة صغيرة لتفادي قراءة متكررة لنفس الكود
+      // منع التكرار السريع لنفس الكود
       await new Promise(r=>setTimeout(r, 900));
     }
     anim = requestAnimationFrame(scanLoop);
@@ -220,9 +294,8 @@
     a.click();
   };
 
-  // تهيئة رابط صفحة الطالب (يفتحها بسرعة)
-  const stu = new URL('student.html', location.href);
-  document.getElementById('studentLink').href = stu.toString();
+  // تهيئة QR الطالب فوراً لسهولة الاستخدام
+  showStudentQR();
 })();
 </script>
 </body>
