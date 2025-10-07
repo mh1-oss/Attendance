@@ -46,6 +46,32 @@
   @keyframes flash{0%{background:#ecfeff}100%{background:transparent}}
   @keyframes fade{from{opacity:0}to{opacity:1}}
   @keyframes pop{from{transform:scale(.98);opacity:.0}to{transform:scale(1);opacity:1}}
+   body {
+    margin: 0;
+    font-family: 'Cairo', sans-serif;
+    padding-bottom: 70px; /* حتى ما ينخفي المحتوى خلف الفوتر */
+  }
+
+  footer {
+    position: fixed;
+    left: 0;
+    bottom: -80px; /* يبدأ مخفي */
+    width: 100%;
+    text-align: center;
+    padding: 15px; /* تحكم بالارتفاع من هنا */
+    font-size: 18px; /* حجم الخط */
+    background-color: rgba(255, 255, 255, 0.3); /* خلفية شفافة */
+    color: #111;
+    backdrop-filter: blur(6px);
+    transition: bottom 0.6s ease, opacity 0.6s ease;
+    opacity: 0;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.1); /* ظل خفيف للأناقة */
+  }
+
+  footer.visible {
+    bottom: 0;
+    opacity: 1;
+  }
 </style>
 </head>
 <body>
@@ -517,10 +543,27 @@
   showStuQR.click();
 })();
 </script>
-  <footer style="text-align: center; padding: 10px; background-color: #f2f2f2; color: #333; font-family: Arial, sans-serif; font-size: 14px; position: fixed; bottom: 0; width: 100%;">
+  <!-- داخل <body> في نهاية الصفحة -->
+<footer id="footer">
   تم إنشاء هذا البرنامج بواسطة الطالب <strong>محمد مصطفى</strong> من فرع الجيوتكنيك
 </footer>
+
+<script>
+  const footer = document.getElementById('footer');
+  window.addEventListener('scroll', () => {
+    const scrollPosition = window.scrollY + window.innerHeight;
+    const pageHeight = document.body.offsetHeight;
+
+    // يظهر الفوتر عندما توصل قريب نهاية الصفحة
+    if (scrollPosition >= pageHeight - 100) {
+      footer.classList.add('visible');
+    } else {
+      footer.classList.remove('visible');
+    }
+  });
+</script>
 </body>
 </html>
+
 
 
