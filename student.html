@@ -25,7 +25,7 @@
   <div class="card">
     <div class="row">
       <div class="col">
-        <label>رمز الجلسة (يعطيه الأستاذ)</label>
+        <label>رمز الجلسة (من الأستاذ)</label>
         <input id="sess" placeholder="مثال: A5K9Q">
       </div>
       <div class="col">
@@ -39,7 +39,7 @@
         <input id="sec" placeholder="مثال: A / 3">
       </div>
       <div class="col">
-        <label>مُعرّف الطالب (يُنشأ تلقائياً)</label>
+        <label>مُعرّف جهازك (لمنع التكرار)</label>
         <input id="uid" readonly>
       </div>
     </div>
@@ -51,9 +51,8 @@
     </div>
 
     <div id="qrbox" style="display:none">
-      <p class="muted">هذا هو QR الخاص بك. لا تشاركه مع زملائك.</p>
+      <p class="muted">هذا هو QR الخاص بك. لا تشاركه.</p>
       <img id="qr" class="qr" width="220" height="220" alt="QR">
-      <div class="muted">محتوى آمن ومشفّر JSON (يقرأه جهاز الأستاذ فقط).</div>
       <div class="pill" id="preview" style="margin-top:8px"></div>
     </div>
   </div>
@@ -62,9 +61,8 @@
 <script>
 (function(){
   const P = new URLSearchParams(location.search);
-  // مساعدة: لو الأستاذ نشر رابط فيه s= أو t=، نعرضه كإشارة للطالب
   const S_HINT = (P.get('s')||'').trim();
-  const sess   = document.getElementById('sess');
+  const sess = document.getElementById('sess');
   if(S_HINT) sess.value = S_HINT;
 
   const full = document.getElementById('full');
@@ -74,7 +72,6 @@
   const qrbox= document.getElementById('qrbox');
   const preview = document.getElementById('preview');
 
-  // هوية فريدة شبه دائمة لجهاز الطالب (تتغير إذا ضغط "تجديد")
   function newId(){
     return 'S-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8).toUpperCase();
   }
@@ -83,8 +80,8 @@
 
   function genQR(){
     const payload = {
-      id: uid.value,                          // فريد لمنع التكرار عند الأستاذ
-      session: (sess.value||'').trim(),       // يطابق ما عند الأستاذ
+      id: uid.value,
+      session: (sess.value||'').trim(),
       full_name: (full.value||'').trim(),
       section: (sec.value||'').trim()
     };
@@ -92,7 +89,7 @@
     if(!payload.full_name)return alert('أدخل الاسم الكامل');
 
     const text = JSON.stringify(payload);
-    const api  = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(text);
+    const api  = 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=' + encodeURIComponent(text);
     qr.src = api;
     qrbox.style.display = 'block';
     preview.textContent = `الاسم: ${payload.full_name} — الشعبة: ${payload.section}`;
