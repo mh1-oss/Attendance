@@ -1,92 +1,105 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>تسجيل حضور – الطالب</title>
-  <style>
-    :root{--bg:#0b1020;--card:#141a2f;--text:#eef2ff;--muted:#9aa4c7;--accent:#5da8ff}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:tahoma,arial,sans-serif;background:#0b1020;color:#eef2ff}
-    .wrap{max-width:640px;margin:0 auto;padding:18px}
-    .card{background:#141a2f;border-radius:16px;padding:16px;margin:10px 0;box-shadow:0 6px 20px #0006}
-    label{display:block;margin:10px 0 6px}
-    input{width:100%;padding:10px;border-radius:10px;border:1px solid #2a3358;background:#0f1530;color:#fff}
-    button{padding:10px 16px;border-radius:12px;border:none;background:#5da8ff;color:#00112b;font-weight:700;cursor:pointer}
-    .muted{color:#9aa4c7}
-    .pill{display:inline-block;background:#0f1530;border:1px solid #2a3358;padding:6px 10px;border-radius:999px}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>تسجيل الحضور — توليد QR</title>
+<style>
+  :root{--bg:#0b1020;--card:#141a2f;--text:#eef2ff;--muted:#9aa4c7;--accent:#5da8ff}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:tahoma,arial,sans-serif;background:#0b1020;color:#eef2ff}
+  .wrap{max-width:640px;margin:0 auto;padding:18px}
+  .card{background:#141a2f;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 6px 20px #0006}
+  label{display:block;margin:10px 0 6px}
+  input{width:100%;padding:10px;border-radius:10px;border:1px solid #2a3358;background:#0f1530;color:#fff}
+  button{padding:10px 16px;border-radius:12px;border:none;background:#5da8ff;color:#00112b;font-weight:700;cursor:pointer}
+  .muted{color:#9aa4c7;font-size:12px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}.col{flex:1 1 240px}
+  img.qr{background:#fff;border-radius:12px;padding:8px;margin-top:10px}
+  .pill{display:inline-block;background:#0f1530;border:1px solid #2a3358;padding:6px 10px;border-radius:999px}
+</style>
 </head>
 <body>
 <div class="wrap">
-  <h1>تسجيل الحضور</h1>
+  <h1>تسجيل الحضور — توليد QR</h1>
   <div class="card">
-    <p class="muted">الجلسة: <span id="sess" class="pill"></span></p>
-    <p class="muted">المحاضرة: <span id="ltitle" class="pill"></span> — <span id="ldate" class="pill"></span></p>
-
-    <label>الاسم الكامل</label>
-    <input id="name" placeholder="مثال: مصطفى محمد فوزي">
-
-    <label>الشعبة / المجموعة</label>
-    <input id="section" placeholder="مثال: A / 3">
-
-    <div id="epWrap">
-      <label>رابط Web App (مرة واحدة إذا لم يكن محفوظًا)</label>
-      <input id="endpoint" placeholder="https://script.google.com/macros/s/.../exec">
+    <div class="row">
+      <div class="col">
+        <label>رمز الجلسة (يعطيه الأستاذ)</label>
+        <input id="sess" placeholder="مثال: A5K9Q">
+      </div>
+      <div class="col">
+        <label>الاسم الكامل</label>
+        <input id="full" placeholder="مثال: مصطفى محمد فوزي">
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <label>الشعبة / المجموعة</label>
+        <input id="sec" placeholder="مثال: A / 3">
+      </div>
+      <div class="col">
+        <label>مُعرّف الطالب (يُنشأ تلقائياً)</label>
+        <input id="uid" readonly>
+      </div>
     </div>
 
-    <div style="margin-top:10px"><button id="send">تسجيل</button></div>
-    <p id="ok" class="muted" style="display:none;margin-top:10px">✅ تم تسجيل حضورك. شكراً لك.</p>
+    <div class="muted">اضغط توليد، ثم اعرض الـ QR أمام كاميرا الأستاذ.</div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <button id="gen">توليد QR</button>
+      <button id="regen">تجديد المُعرّف</button>
+    </div>
+
+    <div id="qrbox" style="display:none">
+      <p class="muted">هذا هو QR الخاص بك. لا تشاركه مع زملائك.</p>
+      <img id="qr" class="qr" width="220" height="220" alt="QR">
+      <div class="muted">محتوى آمن ومشفّر JSON (يقرأه جهاز الأستاذ فقط).</div>
+      <div class="pill" id="preview" style="margin-top:8px"></div>
+    </div>
   </div>
 </div>
 
 <script>
 (function(){
   const P = new URLSearchParams(location.search);
-  const S = (P.get('s')||'').trim();
-  const T = (P.get('t')||'').trim();
-  const D = (P.get('d')||'').trim();
-  const EP_PARAM = (P.get('ep')||'').trim();
+  // مساعدة: لو الأستاذ نشر رابط فيه s= أو t=، نعرضه كإشارة للطالب
+  const S_HINT = (P.get('s')||'').trim();
+  const sess   = document.getElementById('sess');
+  if(S_HINT) sess.value = S_HINT;
 
-  document.getElementById('sess').textContent = S;
-  document.getElementById('ltitle').textContent = T;
-  document.getElementById('ldate').textContent = D;
+  const full = document.getElementById('full');
+  const sec  = document.getElementById('sec');
+  const uid  = document.getElementById('uid');
+  const qr   = document.getElementById('qr');
+  const qrbox= document.getElementById('qrbox');
+  const preview = document.getElementById('preview');
 
-  const epWrap  = document.getElementById('epWrap');
-  const epInput = document.getElementById('endpoint');
-  epInput.value = EP_PARAM || localStorage.getItem('qr_ep') || '';
-  if (EP_PARAM){ localStorage.setItem('qr_ep', EP_PARAM); }
-  if (epInput.value){ epWrap.style.display = 'none'; } // نخفي الحقل إذا الرابط معروف
+  // هوية فريدة شبه دائمة لجهاز الطالب (تتغير إذا ضغط "تجديد")
+  function newId(){
+    return 'S-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8).toUpperCase();
+  }
+  uid.value = localStorage.getItem('stu_uid') || newId();
+  document.getElementById('regen').onclick = ()=>{ uid.value = newId(); localStorage.setItem('stu_uid', uid.value); };
 
-  const nameInput = document.getElementById('name');
-  const secInput  = document.getElementById('section');
-  const ok = document.getElementById('ok');
-
-  document.getElementById('send').onclick = async ()=>{
-    const EP = (epInput.value||'').trim();
-    if(!EP) return alert('أدخل رابط Web App');
-    localStorage.setItem('qr_ep', EP);
-    if(!S)  return alert('رمز الجلسة مفقود (امسح QR من الأستاذ)');
-
+  function genQR(){
     const payload = {
-      mode: 'add',
-      session: S,
-      lecture_title: T,
-      lecture_date: D,
-      full_name: nameInput.value.trim(),
-      section: secInput.value.trim(),
-      ua: navigator.userAgent
+      id: uid.value,                          // فريد لمنع التكرار عند الأستاذ
+      session: (sess.value||'').trim(),       // يطابق ما عند الأستاذ
+      full_name: (full.value||'').trim(),
+      section: (sec.value||'').trim()
     };
-    if(!payload.full_name) return alert('أدخل الاسم الكامل');
+    if(!payload.session)  return alert('أدخل رمز الجلسة');
+    if(!payload.full_name)return alert('أدخل الاسم الكامل');
 
-    try{
-      const res = await fetch(EP, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      ok.style.display='block'; nameInput.value=''; secInput.value='';
-    }catch(e){
-      alert('تعذّر الإرسال. تأكد من نشر Apps Script (Anyone with the link) والإنترنت.');
-    }
-  };
+    const text = JSON.stringify(payload);
+    const api  = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(text);
+    qr.src = api;
+    qrbox.style.display = 'block';
+    preview.textContent = `الاسم: ${payload.full_name} — الشعبة: ${payload.section}`;
+    localStorage.setItem('stu_uid', uid.value);
+  }
+
+  document.getElementById('gen').onclick = genQR;
 })();
 </script>
 </body>
