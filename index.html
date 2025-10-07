@@ -1,171 +1,228 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>لوحة الأستاذ – حضور بالـ QR</title>
-  <style>
-    :root{--bg:#0b1020;--card:#141a2f;--text:#eef2ff;--muted:#9aa4c7;--accent:#5da8ff}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:tahoma,arial,sans-serif;background:var(--bg);color:var(--text)}
-    .wrap{max-width:960px;margin:0 auto;padding:18px}
-    .card{background:var(--card);border-radius:16px;padding:16px;margin:10px 0;box-shadow:0 6px 20px #0006}
-    h1,h2{margin:0 0 10px}
-    label{display:block;margin:10px 0 6px}
-    input{width:100%;padding:10px;border-radius:10px;border:1px solid #2a3358;background:#0f1530;color:#fff}
-    button{padding:10px 16px;border-radius:12px;border:none;background:var(--accent);color:#00112b;font-weight:700;cursor:pointer}
-    .row{display:flex;gap:12px;flex-wrap:wrap}.col{flex:1 1 260px}
-    .muted{color:var(--muted);font-size:12px}
-    .qrbox{display:none;align-items:center;gap:16px;flex-wrap:wrap}
-    img.qr{background:#fff;border-radius:12px;padding:8px}
-    .pill{display:inline-block;background:#0f1530;border:1px solid #2a3358;padding:6px 10px;border-radius:999px}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid #2a3358;text-align:right}
-    th{color:#b9c8ff}
-    #tblwrap{display:none}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>لوحة الأستاذ — ماسح حضور بالـ QR (بدون داتابيس)</title>
+<style>
+  :root{--bg:#0b1020;--card:#141a2f;--text:#eef2ff;--muted:#9aa4c7;--accent:#5da8ff}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:tahoma,arial,sans-serif;background:var(--bg);color:var(--text)}
+  .wrap{max-width:980px;margin:0 auto;padding:18px}
+  .card{background:#141a2f;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 6px 20px #0006}
+  h1,h2{margin:0 0 10px}
+  label{display:block;margin:10px 0 6px}
+  input,select{width:100%;padding:10px;border-radius:10px;border:1px solid #2a3358;background:#0f1530;color:#fff}
+  button{padding:10px 16px;border-radius:12px;border:none;background:#5da8ff;color:#00112b;font-weight:700;cursor:pointer}
+  .row{display:flex;gap:12px;flex-wrap:wrap}.col{flex:1 1 240px}
+  .muted{color:#9aa4c7;font-size:12px}
+  .pill{display:inline-block;background:#0f1530;border:1px solid #2a3358;padding:6px 10px;border-radius:999px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  video{width:100%;max-height:320px;border-radius:12px;background:#000}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px;border-bottom:1px solid #2a3358;text-align:right}
+  th{color:#b9c8ff}
+  .ok{color:#8ef58e}.bad{color:#ff8e8e}
+</style>
 </head>
 <body>
 <div class="wrap">
-  <h1>لوحة الأستاذ – نظام حضور بالـ QR</h1>
+  <h1>لوحة الأستاذ — ماسح حضور بالـ QR</h1>
 
   <div class="card">
-    <h2>الإعداد</h2>
+    <h2>إعداد الجلسة</h2>
     <div class="row">
-      <div class="col">
-        <label>رابط Web App (Google Apps Script)</label>
-        <input id="ep" placeholder="https://script.google.com/macros/s/.../exec">
-        <div class="muted">ألصق رابط النشر من Apps Script. يُحفظ محليًا في هذا المتصفح.</div>
-      </div>
       <div class="col">
         <label>رمز الجلسة</label>
-        <input id="sess" placeholder="مثال: A5K9Q">
+        <input id="sess" placeholder="مثال: A5K9Q" />
       </div>
-    </div>
-    <div class="row">
       <div class="col">
         <label>اسم المحاضرة</label>
-        <input id="ltitle" placeholder="مثال: محاضرة 5 – إنتاج البذور">
+        <input id="ltitle" placeholder="مثال: محاضرة 5 — إنتاج البذور" />
       </div>
       <div class="col">
         <label>تاريخ المحاضرة</label>
-        <input id="ldate" type="date">
+        <input id="ldate" type="date" />
       </div>
     </div>
-    <div style="margin:10px 0;display:flex;gap:8px;flex-wrap:wrap">
-      <button id="newBtn">جلسة جديدة + QR</button>
-      <button id="listBtn">جلب الحضور</button>
-      <button id="csvBtn">تصدير CSV</button>
+    <div class="controls">
+      <button id="startScan">تشغيل الماسح</button>
+      <button id="stopScan">إيقاف</button>
+      <button id="clearList">تفريغ القائمة</button>
+      <a id="studentLink" class="pill" href="student.html" target="_blank" rel="noopener">فتح صفحة الطالب</a>
     </div>
-
-    <div id="qrwrap" class="qrbox">
-      <img id="qr" class="qr" width="220" height="220" alt="QR">
-      <div>
-        <div class="pill" id="studentLink"></div>
-        <div class="muted">اعرض الـ QR على الشاشة؛ الطلاب يمسحون الكود ويفتح لهم نموذج الطالب مباشرة.</div>
-      </div>
-    </div>
+    <div class="muted">انشر كود الجلسة للطلاب (شفهيًا أو على السبورة). كل طالب يولّد QR من صفحته.</div>
   </div>
 
-  <div class="card" id="tblwrap">
-    <h2>قائمة الحضور</h2>
-    <table id="tbl">
+  <div class="card">
+    <h2>كاميرا المسح</h2>
+    <div class="row">
+      <div class="col">
+        <label>اختيار الكاميرا</label>
+        <select id="cameraSelect"></select>
+      </div>
+      <div class="col">
+        <label>حالة الماسح</label>
+        <div id="status" class="muted">جاهز…</div>
+      </div>
+    </div>
+    <video id="video" playsinline></video>
+    <canvas id="canvas" style="display:none"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>قائمة الحضور <span id="count" class="pill">0</span></h2>
+    <div class="controls">
+      <button id="csvBtn">تصدير CSV</button>
+    </div>
+    <table>
       <thead>
         <tr><th>#</th><th>الاسم</th><th>الشعبة</th><th>الوقت</th><th>المحاضرة</th><th>تاريخها</th></tr>
       </thead>
-      <tbody></tbody>
+      <tbody id="tbody"></tbody>
     </table>
   </div>
 </div>
 
+<!-- jsQR لفكّ شيفرة QR محلياً -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
 (function(){
-  // عناصر
-  const ep     = document.getElementById('ep');
   const sess   = document.getElementById('sess');
   const ltitle = document.getElementById('ltitle');
   const ldate  = document.getElementById('ldate');
-  const newBtn = document.getElementById('newBtn');
-  const listBtn= document.getElementById('listBtn');
-  const csvBtn = document.getElementById('csvBtn');
-  const qrwrap = document.getElementById('qrwrap');
-  const qr     = document.getElementById('qr');
-  const studentLink = document.getElementById('studentLink');
-  const tblwrap= document.getElementById('tblwrap');
-  const tbody  = document.querySelector('#tbl tbody');
+  const status = document.getElementById('status');
+  const video  = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const ctx    = canvas.getContext('2d');
+  const camSel = document.getElementById('cameraSelect');
+  const startBtn = document.getElementById('startScan');
+  const stopBtn  = document.getElementById('stopScan');
+  const clearBtn = document.getElementById('clearList');
+  const csvBtn   = document.getElementById('csvBtn');
+  const tbody    = document.getElementById('tbody');
+  const countEl  = document.getElementById('count');
 
-  // تحميل/حفظ محلي
-  ep.value     = localStorage.getItem('qr_ep')    || '';
+  // حفظ محلي
   sess.value   = localStorage.getItem('qr_sess')  || '';
   ltitle.value = localStorage.getItem('qr_title') || '';
   ldate.value  = localStorage.getItem('qr_date')  || new Date().toISOString().slice(0,10);
-  const save = () => {
-    localStorage.setItem('qr_ep', ep.value.trim());
-    localStorage.setItem('qr_sess', sess.value.trim());
+  [sess,ltitle,ldate].forEach(el => el.addEventListener('change', save));
+  function save(){
+    localStorage.setItem('qr_sess',  sess.value.trim());
     localStorage.setItem('qr_title', ltitle.value.trim());
-    localStorage.setItem('qr_date', ldate.value);
-  };
-  ['change','keyup'].forEach(ev=>{
-    ep.addEventListener(ev, save); sess.addEventListener(ev, save);
-    ltitle.addEventListener(ev, save); ldate.addEventListener(ev, save);
-  });
+    localStorage.setItem('qr_date',  ldate.value);
+  }
 
-  // أدوات
-  function randCode(n=5){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<n;i++)s+=c[Math.floor(Math.random()*c.length)];return s;}
-  function buildStudentURL(){
-    const base = new URL('student.html', location.href);
-    base.searchParams.set('s',  sess.value.trim());
-    base.searchParams.set('t',  ltitle.value.trim());
-    base.searchParams.set('d',  ldate.value);
-    base.searchParams.set('ep', ep.value.trim()); // نمرر رابط Web App للطالب
-    return base.toString();
+  // قائمة الحضور بالذاكرة
+  const rows = [];
+  const seen = new Set(); // لتجنّب التكرار (بناءً على id فريد داخل الـQR)
+  function addRow(r){
+    if(seen.has(r.id)) return; // مكرر
+    seen.add(r.id);
+    rows.push(r);
+    const tr = document.createElement('tr');
+    [rows.length, r.full_name, r.section, r.timestamp, r.lecture_title, r.lecture_date]
+      .forEach(v => { const td=document.createElement('td'); td.textContent=v; tr.appendChild(td); });
+    tbody.appendChild(tr);
+    countEl.textContent = rows.length;
   }
-  function showQR(url){
-    const api = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='+encodeURIComponent(url);
-    qr.src = api; qrwrap.style.display='flex'; studentLink.textContent = url;
-  }
-  function renderRows(rows){
-    tbody.innerHTML='';
-    rows.forEach((r,i)=>{
-      const tr=document.createElement('tr');
-      [i+1, r.full_name||'', r.section||'', r.timestamp||'', r.lecture_title||'', r.lecture_date||'']
-        .forEach(val=>{const td=document.createElement('td'); td.textContent=val; tr.appendChild(td);});
-      tbody.appendChild(tr);
+
+  // الكاميرات
+  async function listCams(){
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const vids = devices.filter(d => d.kind === 'videoinput');
+    camSel.innerHTML = '';
+    vids.forEach((d,i)=>{
+      const opt = document.createElement('option');
+      opt.value = d.deviceId;
+      opt.textContent = d.label || `كاميرا ${i+1}`;
+      camSel.appendChild(opt);
     });
-    tblwrap.style.display = rows.length ? 'block' : 'none';
   }
 
-  // أزرار
-  newBtn.onclick = ()=>{
-    if(!ep.value.trim())       return alert('أدخل رابط Web App أولاً');
-    if(!ltitle.value.trim())   return alert('أدخل اسم المحاضرة');
-    if(!ldate.value)           return alert('اختر تاريخ المحاضرة');
-    if(!sess.value.trim())     sess.value = randCode();
-    save();
-    showQR(buildStudentURL());
-  };
-
-  listBtn.onclick = async ()=>{
-    if(!ep.value.trim() || !sess.value.trim()) return alert('أدخل رابط Web App ورمز الجلسة');
-    const url = ep.value.trim() + '?mode=list&s=' + encodeURIComponent(sess.value.trim());
+  let stream = null, anim = null;
+  async function start(){
     try{
-      const res = await fetch(url);
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      const json = await res.json();
-      renderRows(json.rows||[]);
+      if(!sess.value.trim()){ alert('اكتب رمز الجلسة أولاً'); return }
+      save();
+      await listCams();
+      const constraints = {
+        video: camSel.value ? { deviceId: { exact: camSel.value } }
+                            : { facingMode: 'environment' },
+        audio: false
+      };
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
+      video.srcObject = stream;
+      await video.play();
+      status.innerHTML = '<span class="ok">الماسح يعمل… وجّه الكاميرا نحو QR</span>';
+      scanLoop();
     }catch(e){
-      alert('تعذر الجلب. تأكد من نشر Apps Script (Anyone with the link).');
+      status.innerHTML = '<span class="bad">تعذّر تشغيل الكاميرا: '+e.message+'</span>';
     }
+  }
+  function stop(){
+    if(anim) cancelAnimationFrame(anim);
+    if(stream){
+      stream.getTracks().forEach(t=>t.stop());
+      stream = null;
+    }
+    status.textContent = 'متوقف.';
+  }
+  async function scanLoop(){
+    if(!video.videoWidth){ anim = requestAnimationFrame(scanLoop); return; }
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const code = jsQR(imgData.data, imgData.width, imgData.height);
+    if(code && code.data){
+      try{
+        const obj = JSON.parse(code.data);
+        // التحقق من الجلسة
+        if((obj.session||'').trim() !== sess.value.trim()){
+          status.innerHTML = '<span class="bad">QR لجلسة مختلفة!</span>';
+        }else{
+          addRow({
+            id: obj.id, // فريد من الطالب
+            full_name: obj.full_name || '',
+            section:   obj.section   || '',
+            timestamp: new Date().toLocaleString(),
+            lecture_title: ltitle.value.trim(),
+            lecture_date:  ldate.value
+          });
+          status.innerHTML = '<span class="ok">تمت الإضافة: '+(obj.full_name||'')+'</span>';
+        }
+      }catch(e){
+        status.innerHTML = '<span class="bad">QR غير صالح</span>';
+      }
+      // مهلة صغيرة لتفادي قراءة متكررة لنفس الكود
+      await new Promise(r=>setTimeout(r, 900));
+    }
+    anim = requestAnimationFrame(scanLoop);
+  }
+
+  startBtn.onclick = start;
+  stopBtn.onclick  = stop;
+  clearBtn.onclick = ()=>{
+    rows.length = 0; seen.clear(); tbody.innerHTML=''; countEl.textContent='0'; status.textContent='تم التفريغ.';
   };
 
+  // تصدير CSV
   csvBtn.onclick = ()=>{
-    const rows = [...tbody.querySelectorAll('tr')].map(tr=>[...tr.children].map(td=>td.textContent));
-    const header = '#,Full Name,Section,Timestamp,Lecture Title,Lecture Date';
-    const csv = [header].concat(rows.map(r=>r.join(','))).join('\n');
-    const blob = new Blob(["\ufeff"+csv], {type:'text/csv;charset=utf-8;'});
-    const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
-    a.download = 'attendance_'+(sess.value||'session')+'.csv'; a.click();
+    const header = ['#','Full Name','Section','Timestamp','Lecture Title','Lecture Date'];
+    const data   = rows.map((r,i)=>[i+1,r.full_name,r.section,r.timestamp,r.lecture_title,r.lecture_date]);
+    const csv = [header.join(',')].concat(data.map(r=>r.join(','))).join('\n');
+    const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'attendance_'+(sess.value||'session')+'.csv';
+    a.click();
   };
+
+  // تهيئة رابط صفحة الطالب (يفتحها بسرعة)
+  const stu = new URL('student.html', location.href);
+  document.getElementById('studentLink').href = stu.toString();
 })();
 </script>
 </body>
